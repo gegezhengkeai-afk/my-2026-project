@@ -3,54 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2026 跨年盛典 - 终极倒计时</title>
+    <title>2026 跨年盛典 - V5修复版</title>
     <style>
-        /* --- 全局与背景 --- */
+        /* --- 全局样式 --- */
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Microsoft YaHei', sans-serif; width: 100%; height: 100%; user-select: none; -webkit-tap-highlight-color: transparent; }
-        
-        #canvas-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1f1000 0%, #000000 90%); overflow: hidden; }
+        #canvas-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1a0b00 0%, #000000 90%); overflow: hidden; }
         #canvas-container { width: 100%; height: 100%; display: block; }
 
-        /* --- 实时时钟 UI --- */
+        /* --- 顶部功能栏 --- */
+        #top-bar {
+            position: absolute; top: 20px; left: 20px; z-index: 150;
+            display: flex; gap: 15px; align-items: center;
+        }
+
+        /* 音乐按钮 */
+        #music-control {
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 2px solid #ffd700; color: #ffd700;
+            display: flex; justify-content: center; align-items: center; cursor: pointer;
+            background: rgba(0,0,0,0.5); font-size: 20px;
+            animation: spin 8s linear infinite;
+        }
+        .paused { animation-play-state: paused !important; opacity: 0.5; filter: grayscale(1); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* 立即跨年按钮 (新增) */
+        #simulate-btn {
+            background: linear-gradient(90deg, #ff8c00, #ffd700);
+            border: none; padding: 8px 16px; border-radius: 20px;
+            color: #000; font-weight: bold; font-size: 0.9rem; cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+            transition: 0.2s;
+        }
+        #simulate-btn:active { transform: scale(0.95); }
+
+        /* --- 实时时钟 --- */
         #time-panel {
             position: absolute; top: 15%; left: 0; width: 100%; 
             text-align: center; pointer-events: none; z-index: 20;
-            transition: opacity 1s; display: none; /* 启动后显示 */
+            transition: opacity 1s; display: none;
         }
-        .time-label { font-size: 1.2rem; color: #886600; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 10px; }
         .main-clock {
-            font-size: 5rem; font-weight: 900; color: #fff;
+            font-size: 16vw; font-weight: 900; color: #fff;
             background: linear-gradient(to bottom, #fff 40%, #ffd700 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             text-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
-            font-family: 'Courier New', monospace; letter-spacing: -2px;
+            font-family: monospace; letter-spacing: -2px; margin: 0; line-height: 1;
         }
-        .countdown-sub { font-size: 1.5rem; color: #ffd700; margin-top: 10px; letter-spacing: 2px; opacity: 0.8; }
+        .countdown-sub { font-size: 1rem; color: #ffd700; margin-top: 10px; letter-spacing: 2px; opacity: 0.8; }
+        @media (min-width: 768px) { .main-clock { font-size: 6rem; } }
 
-        /* --- 监控与 UI --- */
+        /* --- 摄像头监控窗 --- */
         #video-container { 
             position: absolute; top: 20px; right: 20px; z-index: 100; 
-            width: 120px; height: 90px; 
-            border: 2px solid rgba(255, 215, 0, 0.3); border-radius: 12px; overflow: hidden; 
-            transform: scaleX(-1); background: #000; opacity: 0.8; transition: 0.3s;
+            width: 100px; height: 75px; 
+            border: 2px solid rgba(255, 215, 0, 0.3); border-radius: 8px; overflow: hidden; 
+            transform: scaleX(-1); background: #000; opacity: 0.8; 
+            transition: 0.3s; pointer-events: auto;
         }
-        #video-container:hover { opacity: 1; border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+        #video-container.error { border-color: #f00; box-shadow: 0 0 10px #f00; }
         #input-video { width: 100%; height: 100%; object-fit: cover; }
         #skeleton-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
 
-        #ui-layer { position: absolute; bottom: 40px; left: 0; width: 100%; z-index: 3; pointer-events: none; text-align: center; color: #fff; }
+        /* --- 底部状态栏 --- */
+        #ui-layer { position: absolute; bottom: 30px; left: 0; width: 100%; z-index: 3; text-align: center; pointer-events: none; }
         
         #status-pill {
             display: inline-flex; align-items: center; gap: 10px;
-            background: rgba(10, 5, 0, 0.6); padding: 8px 25px; border-radius: 50px;
+            background: rgba(20, 10, 0, 0.8); padding: 10px 30px; border-radius: 50px;
             border: 1px solid rgba(255, 215, 0, 0.3); backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: auto;
+            cursor: pointer; /* 允许点击重试 */
         }
-        #status-icon { width: 12px; height: 12px; border-radius: 50%; background: #555; box-shadow: 0 0 10px #555; transition: 0.3s; }
-        #status-text { color: #ccc; font-size: 1rem; font-weight: bold; letter-spacing: 1px; }
-
-        .instructions { margin-top: 15px; font-size: 0.9rem; color: #888; letter-spacing: 1px; }
-        .key { color: #ffd700; font-weight: bold; margin: 0 4px; }
+        #status-icon { width: 10px; height: 10px; border-radius: 50%; background: #555; transition: 0.3s; }
+        #status-text { color: #ccc; font-size: 0.9rem; font-weight: bold; }
+        .instructions { margin-top: 10px; font-size: 0.8rem; color: #888; }
+        .key { color: #ffd700; margin: 0 2px; }
 
         /* --- 启动屏 --- */
         #start-screen { 
@@ -59,29 +87,13 @@
             z-index: 200; background: #000; transition: opacity 0.8s;
         }
         #start-btn { 
-            padding: 20px 60px; font-size: 1.5rem; font-weight: bold; letter-spacing: 6px; 
-            color: #000; background: #ffd700; border: none; border-radius: 4px; cursor: pointer; 
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.4); transition: 0.3s;
+            padding: 18px 50px; font-size: 1.4rem; font-weight: bold; letter-spacing: 4px; 
+            color: #000; background: #ffd700; border: none; border-radius: 50px; cursor: pointer; 
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5); animation: pulse 2s infinite;
         }
-        #start-btn:hover { background: #fff; box-shadow: 0 0 50px rgba(255, 255, 255, 0.6); transform: scale(1.05); }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         #loading-text { margin-top: 20px; color: #666; font-size: 0.9rem; }
 
-        /* --- 音乐控制 --- */
-        #music-control {
-            position: absolute; top: 20px; left: 20px; z-index: 150;
-            width: 40px; height: 40px; border-radius: 50%;
-            border: 1px solid rgba(255,215,0,0.3); color: #ffd700;
-            display: flex; justify-content: center; align-items: center; cursor: pointer;
-            animation: spin 8s linear infinite;
-        }
-        .paused { animation-play-state: paused !important; opacity: 0.5; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* 移动端适配 */
-        @media (max-width: 768px) {
-            .main-clock { font-size: 3rem; }
-            #time-panel { top: 20%; }
-        }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
     <script type="importmap"> { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } } </script>
@@ -95,31 +107,33 @@
             <source src="./music.mp3" type="audio/mp3">
         </audio>
 
-        <div id="music-control" onclick="toggleMusic()">♫</div>
+        <div id="top-bar">
+            <div id="music-control" onclick="toggleMusic()">♫</div>
+            <button id="simulate-btn" onclick="forceNewYear()">🎆 立即跨年</button>
+        </div>
 
         <div id="time-panel">
-            <div class="time-label">Current Time (Beijing)</div>
             <div class="main-clock" id="clock-display">00:00:00</div>
             <div class="countdown-sub" id="countdown-display">距离 2026 还有 --天 --时 --分 --秒</div>
         </div>
 
-        <div id="video-container">
+        <div id="video-container" onclick="setupMediaPipe()">
             <video id="input-video" autoplay playsinline muted></video>
             <canvas id="skeleton-canvas"></canvas>
         </div>
 
         <div id="start-screen">
-            <button id="start-btn" onclick="startExperience()">进入跨年现场</button>
-            <div id="loading-text">系统初始化中...</div>
+            <button id="start-btn" onclick="startExperience()">进入盛典</button>
+            <div id="loading-text">资源加载中...</div>
         </div>
 
         <div id="ui-layer" style="display:none">
-            <div id="status-pill">
+            <div id="status-pill" onclick="setupMediaPipe()">
                 <div id="status-icon"></div>
-                <div id="status-text">等待手势...</div>
+                <div id="status-text">初始化视觉引擎...</div>
             </div>
             <div class="instructions">
-                <span class="key">握拳</span>聚合蛋糕 / <span class="key">张开</span>散开照片 / <span class="key">捏合</span>抓取回忆
+                <span class="key">握拳</span>聚合 <span class="key">张开</span>散开 <span class="key">捏合</span>放大 | 若无法识别请点击状态栏重试
             </div>
         </div>
     </div>
@@ -129,297 +143,191 @@
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
         import { FilesetResolver, HandLandmarker } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0';
         import { FontLoader } from 'three/addons/loaders/FontLoader.js';
         import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
         import TWEEN from 'https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.6.4/dist/tween.esm.js';
 
-        // --- 核心配置 ---
+        // --- 配置区 ---
         const CONFIG = {
-            targetDate: '2026-01-01T00:00:00+08:00', // 2026年北京时间
-            particleCount: 2000, 
-            tiers: [ { r: 30, h: 20 }, { r: 22, h: 16 }, { r: 14, h: 12 } ], // 蛋糕层级
-            cameraZ: 130
+            targetDate: '2026-01-01T00:00:00+08:00', 
+            particleCount: 1500,
+            cameraZ: 140
         };
-
-        const IMAGES_COUNT = 13;
         const IMAGE_PATHS = [];
-        for(let i=1; i<=IMAGES_COUNT; i++) IMAGE_PATHS.push(`./images/${i}.jpg`);
+        for(let i=1; i<=13; i++) IMAGE_PATHS.push(`./images/${i}.jpg`);
 
-        // --- 全局状态 ---
+        // --- 全局变量 ---
         let scene, camera, renderer, composer;
         let mainGroup = new THREE.Group();
         let textGroup = new THREE.Group();
         let photoMeshes = [];
-        let particles = [];
+        let particles;
         let fontGlobal;
+        
         let isStarted = false;
+        let isCountingDown = false;
         let time = 0;
         
-        // 倒计时状态
-        let isCountingDown = false; // 是否正在最后10秒倒数
-        let hasNewYearArrived = false;
-
-        // 手势状态
-        const STATE = { CLOCK: 'clock', TREE: 'tree', SCATTER: 'scatter', ZOOM: 'zoom' };
-        let currentState = STATE.CLOCK;
-        let zoomTargetIndex = -1;
-        
-        // 视觉识别
-        let handLandmarker, video, lastVideoTime = -1;
+        // 视觉
+        let handLandmarker = null;
+        let video = null;
+        let lastVideoTime = -1;
+        let isCameraActive = false;
         
         // 音乐
         const bgm = document.getElementById('bgm');
         const musicBtn = document.getElementById('music-control');
 
-        // --- 启动逻辑 ---
+        // --- 核心：强制进入跨年 (用户需求) ---
+        window.forceNewYear = function() {
+            if(isCountingDown) return; // 防止重复点击
+            console.log("用户触发立即跨年");
+            startFinalCountdown(10); // 直接开始10秒倒数
+        };
+
+        // --- 启动流程 ---
         window.startExperience = function() {
-            document.getElementById('start-screen').style.opacity = 0;
-            setTimeout(() => document.getElementById('start-screen').style.display = 'none', 800);
+            const startScreen = document.getElementById('start-screen');
+            startScreen.style.opacity = 0;
+            setTimeout(() => startScreen.style.display = 'none', 800);
             
+            // 播放音乐
             bgm.volume = 0.8;
-            bgm.play().then(() => musicBtn.classList.remove('paused')).catch(()=>console.log("Auto-play prevented"));
+            bgm.play().then(() => musicBtn.classList.remove('paused')).catch(e=>console.log("需交互播放"));
             
             isStarted = true;
             document.getElementById('ui-layer').style.display = 'block';
             document.getElementById('time-panel').style.display = 'block';
-
-            // 启动时钟检查循环
+            
+            // 尝试启动摄像头
+            setupMediaPipe();
+            
+            // 启动时钟
             setInterval(updateClock, 1000);
-            updateClock(); // 立即执行一次
+            updateClock();
         };
 
-        window.toggleMusic = () => {
-            if(bgm.paused) { bgm.play(); musicBtn.classList.remove('paused'); }
+        window.toggleMusic = function() {
+            if(bgm.paused) { bgm.play(); musicBtn.classList.remove('paused'); } 
             else { bgm.pause(); musicBtn.classList.add('paused'); }
         };
 
-        // --- 核心：真实时间系统 ---
+        // --- 时钟与倒计时逻辑 ---
         function updateClock() {
-            if(hasNewYearArrived) return; // 新年到了就不更新时钟了
+            if(isCountingDown) return;
 
             const now = new Date();
             const target = new Date(CONFIG.targetDate);
             const diff = target - now;
+            
+            // 北京时间显示
+            const beijing = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (3600000 * 8));
+            document.getElementById('clock-display').innerText = 
+                `${String(beijing.getHours()).padStart(2,'0')}:${String(beijing.getMinutes()).padStart(2,'0')}:${String(beijing.getSeconds()).padStart(2,'0')}`;
 
-            // 1. 更新主时钟显示 (北京时间)
-            // 手动调整时区显示 (UTC+8)
-            const beijingTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (3600000 * 8));
-            const h = String(beijingTime.getHours()).padStart(2, '0');
-            const m = String(beijingTime.getMinutes()).padStart(2, '0');
-            const s = String(beijingTime.getSeconds()).padStart(2, '0');
-            document.getElementById('clock-display').innerText = `${h}:${m}:${s}`;
-
-            // 2. 检查是否进入最后 10 秒
-            if (diff <= 11000 && diff > 0 && !isCountingDown) {
-                startFinalCountdown();
-            }
-
-            // 3. 更新倒计时文字
+            // 倒计时文字
             if (diff > 0) {
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const secs = Math.floor((diff % (1000 * 60)) / 1000);
-                document.getElementById('countdown-display').innerText = `距离 2026 还有 ${days}天 ${hours}时 ${mins}分 ${secs}秒`;
-            } else if (diff <= 0 && !hasNewYearArrived) {
-                triggerNewYear();
+                const d = Math.floor(diff / 86400000);
+                const h = Math.floor((diff % 86400000) / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                document.getElementById('countdown-display').innerText = `距离 2026 还有 ${d}天 ${h}时 ${m}分 ${s}秒`;
+                
+                // 自动触发 (最后10秒)
+                if (diff <= 11000) startFinalCountdown(10);
             }
         }
 
-        function startFinalCountdown() {
+        function startFinalCountdown(startNum) {
             isCountingDown = true;
-            currentState = STATE.CLOCK; // 锁定状态，不让手势干扰
+            document.getElementById('time-panel').style.opacity = 0; // 隐藏时钟
             
-            // 隐藏普通时钟，准备播放 3D 倒计时
-            document.getElementById('time-panel').style.opacity = 0;
+            // 摄像机拉近效果
+            new TWEEN.Tween(camera.position).to({z: 80}, 10000).start();
             
-            // 摄像机拉近
-            new TWEEN.Tween(camera.position).to({z: 80}, 10000).easing(TWEEN.Easing.Linear.None).start();
-            
-            // 播放 3D 数字倒计时序列
-            playCountdownSequence(10);
+            // 开始递归倒数
+            playCountdownNum(startNum);
         }
 
-        async function playCountdownSequence(num) {
-            if(num < 1) return;
+        function playCountdownNum(num) {
+            if (num < 1) {
+                triggerFireworkShow();
+                return;
+            }
             show3DText(String(num));
-            setTimeout(() => playCountdownSequence(num - 1), 1000);
+            setTimeout(() => playCountdownNum(num - 1), 1000);
         }
 
-        function triggerNewYear() {
-            hasNewYearArrived = true;
-            document.getElementById('time-panel').style.display = 'none';
+        function triggerFireworkShow() {
             show3DText("Happy New Year");
-            
             setTimeout(() => {
                 show3DText("2026");
-                // 切换到蛋糕模式
+                // 2秒后进入蛋糕模式
                 setTimeout(() => {
                     textGroup.clear();
-                    currentState = STATE.TREE; // 自动聚合蛋糕
                     new TWEEN.Tween(camera.position).to({z: CONFIG.cameraZ}, 2000).easing(TWEEN.Easing.Cubic.Out).start();
-                    photoMeshes.forEach(m => { m.visible = true; });
+                    // 显示所有照片
+                    photoMeshes.forEach(m => { m.visible = true; m.scale.set(0,0,0); new TWEEN.Tween(m.scale).to({x:1,y:1,z:1}, 1000).start(); });
                 }, 2000);
             }, 2000);
         }
 
         function show3DText(str) {
             textGroup.clear();
-            const size = (str.length > 2) ? 15 : 35;
-            const geo = new TextGeometry(str, { font: fontGlobal, size: size, height: 2, curveSegments: 12 });
+            const size = str.length > 3 ? 15 : 35;
+            const geo = new TextGeometry(str, { font: fontGlobal, size: size, height: 2 });
             geo.center();
             const mat = new THREE.MeshBasicMaterial({ color: 0xffd700 });
             const mesh = new THREE.Mesh(geo, mat);
             textGroup.add(mesh);
             
             mesh.scale.set(0,0,0);
-            new TWEEN.Tween(mesh.scale).to({x:1, y:1, z:1}, 500).easing(TWEEN.Easing.Back.Out).start();
+            new TWEEN.Tween(mesh.scale).to({x:1,y:1,z:1}, 500).easing(TWEEN.Easing.Back.Out).start();
             new TWEEN.Tween(mesh.material).to({opacity:0}, 500).delay(800).start();
         }
 
-        // --- Three.js 初始化 ---
-        function initThree() {
-            const container = document.getElementById('canvas-container');
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x110800, 0.002);
-
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = CONFIG.cameraZ;
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            container.appendChild(renderer.domElement);
-
-            const renderScene = new RenderPass(scene, camera);
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.5; bloomPass.strength = 1.2; bloomPass.radius = 0.5;
-            
-            composer = new EffectComposer(renderer);
-            composer.addPass(renderScene);
-            composer.addPass(bloomPass);
-
-            // 灯光
-            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambient);
-            const sun = new THREE.PointLight(0xffaa00, 100, 300);
-            sun.position.set(50, 50, 50);
-            scene.add(sun);
-
-            scene.add(mainGroup);
-            scene.add(textGroup);
-
-            createParticles(); // 创造金粉
-            
-            const loader = new FontLoader();
-            loader.load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', (font) => {
-                fontGlobal = font;
-                loadPhotos();
-                // 预热完成
-                document.getElementById('loading-text').innerText = "系统就绪";
-            });
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                composer.setSize(window.innerWidth, window.innerHeight);
-            });
-            
-            setupMediaPipe(); // 立即启动摄像头
-            animate();
-        }
-
-        // --- 视觉：创建惊艳的粒子流 ---
-        function createParticles() {
-            const geo = new THREE.BufferGeometry();
-            const pos = [];
-            const sizes = [];
-            
-            for(let i=0; i<CONFIG.particleCount; i++) {
-                // 分布在空间中
-                pos.push((Math.random()-0.5)*300, (Math.random()-0.5)*200, (Math.random()-0.5)*200);
-                sizes.push(Math.random() * 1.5);
-            }
-            
-            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-            geo.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
-            
-            const mat = new THREE.PointsMaterial({
-                color: 0xffd700, size: 1, transparent: true, opacity: 0.8,
-                blending: THREE.AdditiveBlending
-            });
-            
-            const system = new THREE.Points(geo, mat);
-            scene.add(system);
-            particles = system;
-        }
-
-        // --- 视觉：加载照片并创建蛋糕 ---
-        function loadPhotos() {
-            const texLoader = new THREE.TextureLoader();
-            IMAGE_PATHS.forEach((path, idx) => {
-                texLoader.load(path, (tex) => {
-                    tex.colorSpace = THREE.SRGBColorSpace;
-                    
-                    // 1. 照片主体
-                    const aspect = tex.image.width / tex.image.height;
-                    let w = 6, h = 6;
-                    if(aspect > 1) h = w / aspect; else w = h * aspect;
-
-                    const geo = new THREE.PlaneGeometry(w, h);
-                    const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
-                    const mesh = new THREE.Mesh(geo, mat);
-
-                    // 2. 奢华金框
-                    const frameGeo = new THREE.BoxGeometry(w+0.4, h+0.4, 0.2);
-                    const frameMat = new THREE.MeshPhysicalMaterial({ 
-                        color: 0xffd700, metalness: 1, roughness: 0.1, 
-                        emissive: 0xffaa00, emissiveIntensity: 0.4 
-                    });
-                    const frame = new THREE.Mesh(frameGeo, frameMat);
-                    frame.position.z = -0.15;
-                    mesh.add(frame);
-
-                    // 3. 装饰发光边框 (Neon)
-                    const lightGeo = new THREE.PlaneGeometry(w+0.8, h+0.8);
-                    const lightMat = new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending });
-                    const light = new THREE.Mesh(lightGeo, lightMat);
-                    light.position.z = -0.2;
-                    mesh.add(light);
-
-                    // 4. 位置计算
-                    const tierIdx = idx % CONFIG.tiers.length;
-                    const tier = CONFIG.tiers[tierIdx];
-                    const angle = (idx / IMAGES_COUNT) * Math.PI * 2 + (tierIdx * 0.5); // 错开角度
-                    
-                    // 蛋糕位置
-                    mesh.userData.treePos = new THREE.Vector3(
-                        Math.cos(angle) * tier.r,
-                        (idx / IMAGES_COUNT) * 40 - 20, // 螺旋上升
-                        Math.sin(angle) * tier.r
-                    );
-                    mesh.userData.treeRot = new THREE.Euler(0, -angle + Math.PI/2, 0);
-
-                    // 散开位置
-                    mesh.userData.scatterPos = new THREE.Vector3(
-                        (Math.random()-0.5)*150, (Math.random()-0.5)*100, (Math.random()-0.5)*80
-                    );
-                    
-                    // 初始隐藏，等待倒计时结束
-                    mesh.position.copy(mesh.userData.scatterPos);
-                    mesh.visible = false; 
-                    
-                    photoMeshes.push(mesh);
-                    mainGroup.add(mesh);
-                });
-            });
-        }
-
-        // --- 动作捕捉：MediaPipe ---
+        // --- 修复版：摄像头逻辑 ---
         async function setupMediaPipe() {
+            const statusText = document.getElementById('status-text');
+            const statusIcon = document.getElementById('status-icon');
+            const vidContainer = document.getElementById('video-container');
+
+            statusText.innerText = "正在请求摄像头权限...";
+            statusIcon.style.background = "#ffa500";
+
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error("浏览器不支持或未开启摄像头权限");
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480, facingMode: "user" } 
+                });
+
+                video = document.getElementById("input-video");
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    isCameraActive = true;
+                    // 初始化模型
+                    initLandmarker();
+                };
+
+            } catch (err) {
+                console.error("Camera Error:", err);
+                isCameraActive = false;
+                vidContainer.classList.add('error');
+                statusIcon.style.background = "#f00";
+                statusText.innerText = "⚠️ 摄像头失败 (点击此处重试)";
+                
+                // 即使没有摄像头，也允许鼠标交互
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('touchmove', onTouchMove, {passive: false});
+            }
+        }
+
+        async function initLandmarker() {
             const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm");
             handLandmarker = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
@@ -428,19 +336,22 @@
                 },
                 runningMode: "VIDEO", numHands: 1, minHandDetectionConfidence: 0.6
             });
-            video = document.getElementById("input-video");
-            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } }).then((stream) => {
-                video.srcObject = stream;
-                video.addEventListener("loadeddata", predictWebcam);
-            });
+            predictWebcam();
+            
+            document.getElementById('status-icon').style.background = "#0f0";
+            document.getElementById('status-text').innerText = "视觉引擎运行中";
+            document.getElementById('video-container').classList.remove('error');
         }
 
         async function predictWebcam() {
-            const canvas = document.getElementById("skeleton-canvas");
-            const ctx = canvas.getContext("2d");
+            if(!isCameraActive) return;
+            const canvas = document.getElementById('skeleton-canvas');
+            const ctx = canvas.getContext('2d');
+            
             if (lastVideoTime !== video.currentTime && handLandmarker) {
                 lastVideoTime = video.currentTime;
                 if(canvas.width !== video.videoWidth) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; }
+                
                 const result = handLandmarker.detectForVideo(video, performance.now());
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
@@ -448,131 +359,140 @@
                     const lm = result.landmarks[0];
                     drawSkeleton(ctx, lm);
                     handleGesture(lm);
-                    updateStatusUI(true);
-                } else {
-                    updateStatusUI(false);
                 }
             }
             requestAnimationFrame(predictWebcam);
         }
 
-        function updateStatusUI(detected) {
-            const icon = document.getElementById('status-icon');
-            const text = document.getElementById('status-text');
-            if(detected) {
-                icon.style.background = '#0f0'; icon.style.boxShadow = '0 0 10px #0f0';
-                text.innerText = "已连接 - 等待指令";
-            } else {
-                icon.style.background = '#555'; icon.style.boxShadow = 'none';
-                text.innerText = "寻找手势...";
-            }
+        // --- 降级方案：鼠标/触摸交互 ---
+        function onMouseMove(e) {
+            if(isCameraActive) return; // 摄像头优先
+            // 简单的鼠标映射：X轴旋转
+            const x = (e.clientX / window.innerWidth) * 2 - 1;
+            mainGroup.rotation.y = x * 0.5;
+        }
+        function onTouchMove(e) {
+            if(isCameraActive) return;
+            const x = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
+            mainGroup.rotation.y = x * 0.5;
         }
 
+        // --- 视觉渲染 ---
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x1a0b00, 0.002);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = CONFIG.cameraZ;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            const composer_setup = new EffectComposer(renderer);
+            composer_setup.addPass(new RenderPass(scene, camera));
+            composer_setup.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85));
+            composer = composer_setup;
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const sun = new THREE.PointLight(0xffd700, 100, 300);
+            sun.position.set(50, 80, 50); scene.add(sun);
+            
+            scene.add(mainGroup); scene.add(textGroup);
+
+            // 金粉粒子
+            const geo = new THREE.BufferGeometry();
+            const pos = [];
+            for(let i=0; i<CONFIG.particleCount; i++) pos.push((Math.random()-0.5)*300, (Math.random()-0.5)*200, (Math.random()-0.5)*200);
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            particles = new THREE.Points(geo, new THREE.PointsMaterial({color: 0xffd700, size: 0.8, transparent: true, opacity: 0.8}));
+            scene.add(particles);
+
+            // 加载字体和照片
+            const loader = new FontLoader();
+            loader.load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', f => {
+                fontGlobal = f;
+                loadPhotos();
+                document.getElementById('loading-text').innerText = "点击按钮开始";
+                document.getElementById('start-btn').style.display = 'block';
+            });
+
+            animate();
+        }
+
+        function loadPhotos() {
+            const loader = new THREE.TextureLoader();
+            IMAGE_PATHS.forEach((path, idx) => {
+                loader.load(path, tex => {
+                    tex.colorSpace = THREE.SRGBColorSpace;
+                    const aspect = tex.image.width / tex.image.height;
+                    let w = 6, h = 6; if(aspect>1) h=w/aspect; else w=h*aspect;
+                    
+                    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({map:tex, side:THREE.DoubleSide}));
+                    const frame = new THREE.Mesh(new THREE.BoxGeometry(w+0.3,h+0.3,0.1), new THREE.MeshStandardMaterial({color:0xffd700, metalness:1, roughness:0.2}));
+                    frame.position.z = -0.1; mesh.add(frame);
+                    
+                    const angle = (idx / 13) * Math.PI * 2;
+                    mesh.userData = { 
+                        treePos: new THREE.Vector3(Math.cos(angle)*25, (idx/13)*30-15, Math.sin(angle)*25),
+                        treeRot: new THREE.Euler(0, -angle+Math.PI/2, 0),
+                        scatterPos: new THREE.Vector3((Math.random()-0.5)*150, (Math.random()-0.5)*100, (Math.random()-0.5)*80)
+                    };
+                    mesh.position.copy(mesh.userData.scatterPos);
+                    mesh.visible = false; 
+                    photoMeshes.push(mesh);
+                    mainGroup.add(mesh);
+                });
+            });
+        }
+
+        // --- 简化版手势与渲染 ---
         function drawSkeleton(ctx, lm) {
-            ctx.strokeStyle = "rgba(255, 215, 0, 0.8)"; ctx.lineWidth = 2; 
-            const points = [0,1,2,3,4, 0,5,6,7,8, 5,9,10,11,12, 9,13,14,15,16, 13,17,18,19,20, 0,17];
+            ctx.strokeStyle = "#0f0"; ctx.lineWidth = 2;
+            const p = [0,1,2,3,4,0,5,6,7,8,5,9,10,11,12,9,13,14,15,16,13,17,18,19,20,0,17];
             ctx.beginPath();
-            for(let i=0; i<points.length-1; i++) {
-                if([4,8,12,16].includes(points[i])) continue;
-                const a = lm[points[i]]; const b = lm[points[i+1]];
-                ctx.moveTo(a.x*canvas.width, a.y*canvas.height);
-                ctx.lineTo(b.x*canvas.width, b.y*canvas.height);
+            for(let i=0; i<p.length-1; i++) {
+                if([4,8,12,16].includes(p[i])) continue;
+                ctx.moveTo(lm[p[i]].x*ctx.canvas.width, lm[p[i]].y*ctx.canvas.height);
+                ctx.lineTo(lm[p[i+1]].x*ctx.canvas.width, lm[p[i+1]].y*ctx.canvas.height);
             }
             ctx.stroke();
         }
 
-        // --- 动作逻辑 ---
         function handleGesture(lm) {
-            if(!isStarted || isCountingDown) return; // 倒计时期间禁用手势
-
-            const pinchDist = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
-            const isPinch = pinchDist < 0.06; // 捏合阈值
-
-            let folded = 0;
-            [8,12,16,20].forEach((t,i) => { if(lm[t].y > lm[[6,10,14,18][i]].y) folded++; });
+            if(!photoMeshes[0] || !photoMeshes[0].visible) return;
+            
+            const isPinch = Math.hypot(lm[4].x-lm[8].x, lm[4].y-lm[8].y) < 0.05;
+            let folded = 0; [8,12,16,20].forEach((t,i)=>{if(lm[t].y > lm[[6,10,14,18][i]].y) folded++});
             const isFist = folded >= 3;
 
-            const text = document.getElementById('status-text');
+            document.getElementById('status-text').innerText = isPinch ? "状态: 抓取" : (isFist ? "状态: 聚合" : "状态: 散开");
 
-            if (isPinch) {
-                if (currentState !== STATE.ZOOM) {
-                    currentState = STATE.ZOOM;
-                    // 寻找最近照片
-                    let minD = Infinity;
-                    photoMeshes.forEach((m, i) => {
-                        const d = camera.position.distanceTo(m.position);
-                        if(d < minD) { minD = d; zoomTargetIndex = i; }
-                    });
+            photoMeshes.forEach((mesh, i) => {
+                let targetPos = mesh.userData.scatterPos;
+                if(isFist) {
+                    targetPos = mesh.userData.treePos;
+                    mesh.rotation.y += (mesh.userData.treeRot.y - mesh.rotation.y)*0.1;
+                } else if(isPinch) {
+                    // 简单逻辑：第一张图放大
+                    if(i===0) { 
+                        targetPos = new THREE.Vector3(0,0,100); 
+                        mesh.lookAt(camera.position);
+                    }
+                } else {
+                    mesh.lookAt(camera.position);
                 }
-                text.innerText = "状态: 抓取回忆";
-                text.style.color = "#0ff";
-            } else if (isFist) {
-                currentState = STATE.TREE;
-                zoomTargetIndex = -1;
-                text.innerText = "状态: 聚合蛋糕";
-                text.style.color = "#ffd700";
-            } else {
-                if (currentState === STATE.ZOOM && !isPinch) currentState = STATE.SCATTER;
-                else if (currentState === STATE.TREE) currentState = STATE.SCATTER;
-                text.innerText = "状态: 星空漫步";
-                text.style.color = "#ccc";
-            }
+                mesh.position.lerp(targetPos, 0.1);
+            });
         }
 
-        // --- 渲染循环 ---
         function animate() {
             requestAnimationFrame(animate);
             TWEEN.update();
             time += 0.01;
-
-            if(isStarted) {
-                // 1. 粒子运动
-                const pPos = particles.geometry.attributes.position.array;
-                for(let i=1; i<pPos.length; i+=3) {
-                    pPos[i] -= 0.1; 
-                    if(pPos[i] < -100) pPos[i] = 100;
-                }
-                particles.geometry.attributes.position.needsUpdate = true;
-                particles.rotation.y = time * 0.05;
-
-                // 2. 整体旋转
-                if(currentState === STATE.TREE) mainGroup.rotation.y += 0.005;
-                else if(currentState === STATE.SCATTER) mainGroup.rotation.y += 0.002;
-
-                // 3. 照片墙逻辑
-                photoMeshes.forEach((mesh, idx) => {
-                    let targetPos, targetRot;
-                    
-                    if(currentState === STATE.ZOOM) {
-                        if(idx === zoomTargetIndex) {
-                            // 飞到面前
-                            const vec = new THREE.Vector3(0, 0, -30);
-                            vec.applyQuaternion(camera.quaternion);
-                            vec.add(camera.position);
-                            mainGroup.worldToLocal(vec);
-                            targetPos = vec;
-                            mesh.lookAt(camera.position);
-                            mesh.scale.lerp(new THREE.Vector3(2, 2, 2), 0.1);
-                        } else {
-                            targetPos = mesh.userData.scatterPos.clone().multiplyScalar(1.5);
-                            mesh.scale.lerp(new THREE.Vector3(0.5, 0.5, 0.5), 0.1);
-                        }
-                    } else if (currentState === STATE.TREE) {
-                        targetPos = mesh.userData.treePos;
-                        // 修正朝向：确保照片正面朝外
-                        mesh.lookAt(new THREE.Vector3(0, mesh.position.y, 0));
-                        mesh.rotateY(Math.PI); 
-                        mesh.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
-                    } else { // SCATTER
-                        targetPos = mesh.userData.scatterPos;
-                        mesh.lookAt(camera.position);
-                        mesh.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
-                    }
-
-                    if(targetPos && currentState !== STATE.ZOOM) mesh.position.lerp(targetPos, 0.08);
-                    else if(currentState === STATE.ZOOM && idx === zoomTargetIndex) mesh.position.lerp(targetPos, 0.15);
-                });
-            }
+            particles.rotation.y = time * 0.05;
             composer.render();
         }
     </script>
